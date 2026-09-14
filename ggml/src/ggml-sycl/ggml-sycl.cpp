@@ -6653,11 +6653,7 @@ static bool do_ggml_backend_sycl_device_supports_op(ggml_backend_dev_t dev, cons
         case GGML_OP_POOL_2D:
         case GGML_OP_POOL_1D:
         case GGML_OP_ACC:
-            return true;
         case GGML_OP_PAD:
-            if (ggml_get_op_params_i32(op, 8) != 0) {
-                return false;
-            }
             return true;
         case GGML_OP_LEAKY_RELU:
         case GGML_OP_TIMESTEP_EMBEDDING:
