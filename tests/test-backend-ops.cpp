@@ -8304,18 +8304,24 @@ struct test_roll : public test_case {
     const int shift3;
     const int shift4;
     const bool permute;
+    const bool view;
 
     std::string vars() override {
-        return VARS_TO_STR5(shift0, shift1, shift3, shift4, permute);
+        return VARS_TO_STR6(shift0, shift1, shift3, shift4, permute, view);
     }
 
-    test_roll(int shift0 = 3, int shift1 = -2, int shift3 = 1, int shift4 = -1, bool permute = false)
-        : shift0(shift0), shift1(shift1), shift3(shift3), shift4(shift4), permute(permute) {}
+    test_roll(int shift0 = 3, int shift1 = -2, int shift3 = 1, int shift4 = -1, bool permute = false, bool view = false)
+        : shift0(shift0), shift1(shift1), shift3(shift3), shift4(shift4), permute(permute), view(view) {}
 
     ggml_tensor * build_graph(ggml_context * ctx) override {
         int64_t ne[4] = {10, 5, 4, 3};
         ggml_tensor * a = ggml_new_tensor(ctx, GGML_TYPE_F32, 4, ne);
         ggml_set_name(a, "a");
+
+        if (view) {
+            a = ggml_view_4d(ctx, a, ne[0], ne[1] - 1, ne[2] - 1, ne[3] - 1, a->nb[1], a->nb[2], a->nb[3], a->nb[1]);
+            ggml_set_name(a, "a_view");
+        }
 
         if (permute) {
             // ggml_roll only requires nb[0] == type size, so a permuted src is valid
@@ -11584,8 +11590,12 @@ static std::vector<std::unique_ptr<test_case>> make_test_cases_eval() {
 
     test_cases.emplace_back(new test_pad_reflect_1d());
     test_cases.emplace_back(new test_pad_reflect_1d(GGML_TYPE_F32, {3000, 384, 4, 1}));
-    test_cases.emplace_back(new test_roll());
-    test_cases.emplace_back(new test_roll(3, -2, 1, -1, true));
+    for (bool view : {false, true}) {
+        for (bool permute : {false, true}) {
+            test_cases.emplace_back(new test_roll(3, -2, 1, -1, permute, view));
+            test_cases.emplace_back(new test_roll(0, 0, 0, 0, permute, view));
+        }
+    }
     test_cases.emplace_back(new test_arange());
     test_cases.emplace_back(new test_arange(GGML_TYPE_F32, 0.0f, 1048576.0f, 1.0f));
     test_cases.emplace_back(new test_timestep_embedding());
